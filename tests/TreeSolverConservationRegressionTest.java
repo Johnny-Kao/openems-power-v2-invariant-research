@@ -13,16 +13,17 @@ import io.openems.edge.ess.test.DummyMetaEss;
  * Research-only regression tests for a feasible cluster setpoint with a
  * BMS-enforced positive minimum active power on one physical ESS.
  *
+ * <p>
  * Copy into the upstream TreeSolver test package before running:
  * io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/
  */
 public class TreeSolverConservationRegressionTest {
 
 	private static DummyManagedSymmetricEss ess(String id, int chargeMin, int dischargeMax) {
-		return new DummyManagedSymmetricEss(id)
-				.withSoc(50)
-				.withAllowedChargePower(chargeMin)
-				.withAllowedDischargePower(dischargeMax)
+		return new DummyManagedSymmetricEss(id) //
+				.withSoc(50) //
+				.withAllowedChargePower(chargeMin) //
+				.withAllowedDischargePower(dischargeMax) //
 				.withMaxApparentPower(10000);
 	}
 
@@ -86,6 +87,7 @@ public class TreeSolverConservationRegressionTest {
 		assertEquals(2500, activePower(pd, "essA"));
 		assertEquals(2500, activePower(pd, "essB"));
 	}
+
 	@Test
 	public void testFeasibleNegativeTargetWithForcedCharging() {
 		var a = ess("essA", -10000, 10000);
