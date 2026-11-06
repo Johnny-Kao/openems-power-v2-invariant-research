@@ -34,6 +34,8 @@ jobs:
         run: |
           cp research/tests/TreeSolverConservationRegressionTest.java \
             openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/TreeSolverConservationRegressionTest.java
+          cp research/tests/PowerDistributionHandlerV2ConservationIntegrationTest.java \
+            openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/PowerDistributionHandlerV2ConservationIntegrationTest.java
           git -C openems apply --check "$GITHUB_WORKSPACE/research/patches/conservation-rebalance.patch"
           git -C openems apply "$GITHUB_WORKSPACE/research/patches/conservation-rebalance.patch"
           git -C openems diff --check
