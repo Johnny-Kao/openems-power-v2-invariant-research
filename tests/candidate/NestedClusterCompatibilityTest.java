@@ -62,10 +62,10 @@ public class NestedClusterCompatibilityTest {
             var a = output(pd, "a");
             var b = output(pd, "b");
             var c = output(pd, "c");
-            var d = output(pd, "d");
             assertTrue(a >= -10000 && a <= 10000);
             assertTrue(b >= 4000 && b <= 10000);
             assertTrue(c >= -10000 && c <= 10000);
+            var d = output(pd, "d");
             assertTrue(d >= -10000 && d <= 10000);
             assertEquals(target, a + b + c + d, "nested feasible target " + target);
         }
