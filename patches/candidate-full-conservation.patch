@@ -1,0 +1,213 @@
+diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
+--- a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
++++ b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
+@@ -166,48 +166,40 @@
+ 	 * @param target   the target
+ 	 * @param isActive boolean true or false
+ 	 */
+-	private static void distributeToChildren(List<Entry> children, int target, boolean isActive) {
+-
+-		// Pass 1: identify forced entries — either pinned (ownMin==ownMax) or whose
+-		// bounds are entirely opposite to the target direction:
+-		// charge target (isPositive=false) + ownMin > 0 → must discharge regardless
+-		// discharge target (isPositive=true) + ownMax < 0 → must charge regardless
+-		var isPositive = target >= 0;
+-		var remaining = target;
+-		var free = new ArrayList<Entry>(children.size());
+-
+-		for (var child : children) {
+-			var min = isActive ? child.ownActiveMin() : child.ownReactiveMin();
+-			var max = isActive ? child.ownActiveMax() : child.ownReactiveMax();
+-			var isForced = (min == max) //
+-					|| (!isPositive && min > 0) // charge target, child must discharge
+-					|| (isPositive && max < 0); // discharge target, child must charge
+-			if (isForced) {
+-				var forced = isPositive ? max : min;
+-				applySetpoint(child, forced, isActive);
+-				remaining -= forced;
+-			} else {
+-				free.add(child);
+-			}
+-		}
+-
+-		// Pass 2: proportional among free entries
+-		distributeProportional(free, remaining, isActive);
+-	}
+-
+-	/**
+-	 * Applies a setpoint to an entry.
+-	 *
+-	 * <ul>
+-	 * <li>Actual: writes the setpoint directly (clamped to own bounds).
+-	 * <li>Virtual: recurses into {@link #solveActiveNode} /
+-	 * {@link #solveReactiveNode} with the given value as sub-target.
+-	 * </ul>
+-	 * 
+-	 * @param entry    the Entry
+-	 * @param value    the int value
+-	 * @param isActive boolean true or false
+-	 */
++	private static void distributeToChildren(List<Entry> children, int target, boolean isActive) {
++
++		// Pin only fixed entries; direction-forced bounds may need further adjustment.
++		var remaining = target;
++		var free = new ArrayList<Entry>(children.size());
++
++		for (var child : children) {
++			var min = isActive ? child.ownActiveMin() : child.ownReactiveMin();
++			var max = isActive ? child.ownActiveMax() : child.ownReactiveMax();
++			if (min == max) {
++				applySetpoint(child, min, isActive);
++				remaining -= min;
++			} else {
++				free.add(child);
++			}
++		}
++
++		// Pass 2: proportional among free entries
++		distributeProportional(free, remaining, isActive);
++	}
++
++	/**
++	 * Applies a setpoint to an entry.
++	 *
++	 * <ul>
++	 * <li>Actual: writes the setpoint directly (clamped to own bounds).
++	 * <li>Virtual: recurses into {@link #solveActiveNode} /
++	 * {@link #solveReactiveNode} with the given value as sub-target.
++	 * </ul>
++	 * 
++	 * @param entry    the Entry
++	 * @param value    the int value
++	 * @param isActive boolean true or false
++	 */
+ 	private static void applySetpoint(Entry entry, int value, boolean isActive) {
+ 		if (entry instanceof Entry.Actual a) {
+ 			var min = isActive ? a.ownActiveMin() : a.ownReactiveMin();
+@@ -237,48 +237,84 @@
+ 	 * @param target   the int target
+ 	 * @param isActive boolean true or false
+ 	 */
+-	private static void distributeProportional(List<Entry> free, int target, boolean isActive) {
+-		if (free.isEmpty()) {
+-			return;
+-		}
+-
+-		var isPositive = target >= 0;
+-		var totalCapacity = 0;
+-		for (var e : free) {
+-			totalCapacity += isPositive //
+-					? Math.max(isActive ? e.ownActiveMax() : e.ownReactiveMax(), 0)
+-					: Math.abs(Math.min(isActive ? e.ownActiveMin() : e.ownReactiveMin(), 0));
+-		}
+-
+-		// Cap target to total available capacity
+-		target = isPositive //
+-				? Math.min(target, totalCapacity) //
+-				: Math.max(target, -totalCapacity);
+-
+-		var remaining = target;
+-		for (int i = 0; i < free.size(); i++) {
+-			var e = free.get(i);
+-			int power;
+-
+-			if (i == free.size() - 1) {
+-				power = remaining; // last entry absorbs rounding remainder
+-			} else if (totalCapacity == 0) {
+-				power = target / free.size();
+-			} else {
+-				var allowed = isPositive //
+-						? Math.max(isActive ? e.ownActiveMax() : e.ownReactiveMax(), 0)
+-						: Math.abs(Math.min(isActive ? e.ownActiveMin() : e.ownReactiveMin(), 0));
+-				power = (int) ((long) target * allowed / totalCapacity);
+-			}
+-
+-			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
+-			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
+-			power = fitWithin(min, max, power);
+-			remaining -= power;
+-			applySetpoint(e, power, isActive);
+-		}
+-	}
+-
++	private static void distributeProportional(List<Entry> free, int target, boolean isActive) {
++		if (free.isEmpty()) {
++			return;
++		}
++
++		var isPositive = target >= 0;
++		var totalCapacity = 0;
++		for (var e : free) {
++			totalCapacity += isPositive //
++					? Math.max(isActive ? e.ownActiveMax() : e.ownReactiveMax(), 0)
++					: Math.abs(Math.min(isActive ? e.ownActiveMin() : e.ownReactiveMin(), 0));
++		}
++
++		// Cap target to total available capacity
++		target = isPositive //
++				? Math.min(target, totalCapacity) //
++				: Math.max(target, -totalCapacity);
++
++		var remaining = target;
++		var assigned = new int[free.size()];
++		for (int i = 0; i < free.size(); i++) {
++			var e = free.get(i);
++			int power;
++
++			if (i == free.size() - 1) {
++				power = remaining; // last entry absorbs rounding remainder
++			} else if (totalCapacity == 0) {
++				power = target / free.size();
++			} else {
++				var allowed = isPositive //
++						? Math.max(isActive ? e.ownActiveMax() : e.ownReactiveMax(), 0)
++						: Math.abs(Math.min(isActive ? e.ownActiveMin() : e.ownReactiveMin(), 0));
++				power = (int) ((long) target * allowed / totalCapacity);
++			}
++
++			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
++			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
++			power = fitWithin(min, max, power);
++			remaining -= power;
++			assigned[i] = power;
++		}
++
++		// Use same-direction headroom first to avoid unnecessary opposing flows.
++		remaining = redistributeResidual(free, assigned, remaining, isActive, false);
++		if (remaining != 0) {
++			redistributeResidual(free, assigned, remaining, isActive, true);
++		}
++		for (int i = 0; i < free.size(); i++) {
++			applySetpoint(free.get(i), assigned[i], isActive);
++		}
++	}
++
++	private static int redistributeResidual(List<Entry> free, int[] assigned, int remaining, boolean isActive,
++			boolean allowSignChange) {
++		var headrooms = new long[free.size()];
++		long totalHeadroom = 0;
++		for (int i = 0; i < free.size(); i++) {
++			var e = free.get(i);
++			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
++			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
++			var bound = remaining > 0 //
++					? (!isActive || allowSignChange || assigned[i] >= 0 ? max : Math.min(0, max)) //
++					: (!isActive || allowSignChange || assigned[i] <= 0 ? min : Math.max(0, min));
++			headrooms[i] = Math.max(0L, remaining > 0 //
++					? (long) bound - assigned[i] //
++					: (long) assigned[i] - bound);
++			totalHeadroom += headrooms[i];
++		}
++		for (int i = 0; i < free.size() && remaining != 0 && totalHeadroom > 0; i++) {
++			var adjustment = (long) remaining * headrooms[i] / totalHeadroom;
++			adjustment = Math.max(-headrooms[i], Math.min(headrooms[i], adjustment));
++			assigned[i] += (int) adjustment;
++			remaining -= (int) adjustment;
++			totalHeadroom -= headrooms[i];
++		}
++		return remaining;
++	}
++
+ 	private static void tightenReactiveBounds(ImmutableMap<String, Entry> entries) {
+ 		for (var entry : entries.values()) {
+ 			if (!(entry instanceof Entry.Actual a)) {
