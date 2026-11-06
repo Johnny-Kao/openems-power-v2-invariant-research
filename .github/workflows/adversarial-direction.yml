@@ -1,0 +1,51 @@
+name: OpenEMS V2 adversarial direction check (candidate policy)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  direction:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout research
+        uses: actions/checkout@v4
+        with:
+          path: research
+      - name: Checkout pinned OpenEMS baseline
+        uses: actions/checkout@v4
+        with:
+          repository: OpenEMS/openems
+          ref: 9a4b30331ac1f557d752eb8290633042144550a7
+          path: openems
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Apply current research patch and candidate test
+        shell: bash
+        run: |
+          cp research/tests/candidate/DirectionPreservationCandidateTest.java \
+            openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/DirectionPreservationCandidateTest.java
+          git -C openems apply --check "$GITHUB_WORKSPACE/research/patches/conservation-rebalance.patch"
+          git -C openems apply "$GITHUB_WORKSPACE/research/patches/conservation-rebalance.patch"
+      - name: Run isolated candidate-contract test
+        working-directory: openems
+        run: |
+          chmod +x gradlew
+          ./gradlew :io.openems.edge.ess.core:test \
+            --tests 'io.openems.edge.ess.core.power.v2.DirectionPreservationCandidateTest' \
+            --no-daemon
+      - name: Upload failing test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: direction-candidate-test-results
+          path: |
+            openems/io.openems.edge.ess.core/build/test-results/**
+            openems/io.openems.edge.ess.core/build/reports/tests/**
+          if-no-files-found: ignore
