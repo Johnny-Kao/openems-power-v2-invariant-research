@@ -46,6 +46,10 @@ jobs:
           chmod +x gradlew
           ./gradlew :io.openems.edge.ess.core:test --no-daemon --stacktrace
 
+      - name: Check project Java style
+        working-directory: openems
+        run: ./gradlew :io.openems.edge.ess.core:checkstyleMain :io.openems.edge.ess.core:checkstyleTest --no-daemon
+
       - name: Upload results
         if: always()
         uses: actions/upload-artifact@v4
