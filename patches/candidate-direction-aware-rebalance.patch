@@ -108,8 +108,8 @@ diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/Tree
 +			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
 +			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
 +			var bound = remaining > 0 //
-+					? (allowSignChange || assigned[i] >= 0 ? max : Math.min(0, max)) //
-+					: (allowSignChange || assigned[i] <= 0 ? min : Math.max(0, min));
++					? (!isActive || allowSignChange || assigned[i] >= 0 ? max : Math.min(0, max)) //
++					: (!isActive || allowSignChange || assigned[i] <= 0 ? min : Math.max(0, min));
 +			headrooms[i] = Math.max(0L, remaining > 0 //
 +					? (long) bound - assigned[i] //
 +					: (long) assigned[i] - bound);
