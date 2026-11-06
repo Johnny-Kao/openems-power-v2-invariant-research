@@ -1,7 +1,10 @@
 diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
 --- a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
 +++ b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
-@@ -240,41 +240,61 @@
+@@ -237,48 +237,67 @@
+ 	 * @param target   the int target
+ 	 * @param isActive boolean true or false
+ 	 */
 -	private static void distributeProportional(List<Entry> free, int target, boolean isActive) {
 -		if (free.isEmpty()) {
 -			return;
@@ -43,6 +46,7 @@ diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/Tree
 -			applySetpoint(e, power, isActive);
 -		}
 -	}
+-
 +	private static void distributeProportional(List<Entry> free, int target, boolean isActive) {
 +		if (free.isEmpty()) {
 +			return;
@@ -85,16 +89,15 @@ diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/Tree
 +			assigned[i] = power;
 +		}
 +
-+		// Clamping can change the sum. Use remaining headroom to restore the
-+		// feasible cluster target without disturbing allocations that already match.
++		// Clamping can change the sum. Recover the residual from free ESS headroom.
 +		for (int i = 0; i < free.size() && remaining != 0; i++) {
 +			var e = free.get(i);
 +			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
 +			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
-+			var headroom = remaining > 0 // 
-+					? (long) max - assigned[i] // 
++			var headroom = remaining > 0 //
++					? (long) max - assigned[i] //
 +					: (long) assigned[i] - min;
-+			var amount = (int) Math.min(Math.abs((long) remaining), Math.max(0, headroom));
++			var amount = (int) Math.min(Math.abs((long) remaining), Math.max(0L, headroom));
 +			var delta = remaining > 0 ? amount : -amount;
 +			assigned[i] += delta;
 +			remaining -= delta;
@@ -104,3 +107,7 @@ diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/Tree
 +			applySetpoint(free.get(i), assigned[i], isActive);
 +		}
 +	}
++
+ 	private static void tightenReactiveBounds(ImmutableMap<String, Entry> entries) {
+ 		for (var entry : entries.values()) {
+ 			if (!(entry instanceof Entry.Actual a)) {
