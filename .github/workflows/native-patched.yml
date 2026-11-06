@@ -1,0 +1,58 @@
+name: OpenEMS V2 native regression (patched)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  patched:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout research
+        uses: actions/checkout@v4
+        with:
+          path: research
+
+      - name: Checkout exact OpenEMS baseline revision
+        uses: actions/checkout@v4
+        with:
+          repository: OpenEMS/openems
+          ref: 9a4b30331ac1f557d752eb8290633042144550a7
+          path: openems
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Apply research patch and add native regression tests
+        shell: bash
+        run: |
+          cp research/tests/TreeSolverConservationRegressionTest.java \
+            openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/TreeSolverConservationRegressionTest.java
+          git -C openems apply --check "$GITHUB_WORKSPACE/research/patches/conservation-rebalance.patch"
+          git -C openems apply "$GITHUB_WORKSPACE/research/patches/conservation-rebalance.patch"
+          git -C openems diff --check
+          git -C openems diff --stat
+          git -C openems rev-parse HEAD
+
+      - name: Run full ESS core native JUnit suite
+        working-directory: openems
+        run: |
+          chmod +x gradlew
+          ./gradlew :io.openems.edge.ess.core:test --no-daemon --stacktrace
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: patched-ess-core-results
+          path: |
+            openems/io.openems.edge.ess.core/generated/test-reports/**
+            openems/io.openems.edge.ess.core/build/test-results/**
+            openems/io.openems.edge.ess.core/build/reports/tests/**
+          if-no-files-found: ignore
