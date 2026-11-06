@@ -33,7 +33,7 @@ jobs:
             cp "$file" openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/
           done
           git -C openems apply --check "$GITHUB_WORKSPACE/research/patches/candidate-full-conservation.patch"
-          git -C openems apply "$GITHUB_WORKSPACE/research/patches/candidate-direction-aware-rebalance.patch"
+          git -C openems apply "$GITHUB_WORKSPACE/research/patches/candidate-full-conservation.patch"
           git -C openems diff --check
           git -C openems diff --stat
       - name: Run full ESS Core native JUnit
