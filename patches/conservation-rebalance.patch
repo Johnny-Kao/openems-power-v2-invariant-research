@@ -1,7 +1,7 @@
 diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
 --- a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
 +++ b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
-@@ -237,48 +237,67 @@
+@@ -237,48 +237,75 @@
  	 * @param target   the int target
  	 * @param isActive boolean true or false
  	 */
@@ -89,18 +89,26 @@ diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/Tree
 +			assigned[i] = power;
 +		}
 +
-+		// Clamping can change the sum. Recover the residual from free ESS headroom.
-+		for (int i = 0; i < free.size() && remaining != 0; i++) {
-+			var e = free.get(i);
-+			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
-+			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
-+			var headroom = remaining > 0 //
-+					? (long) max - assigned[i] //
-+					: (long) assigned[i] - min;
-+			var amount = (int) Math.min(Math.abs((long) remaining), Math.max(0L, headroom));
-+			var delta = remaining > 0 ? amount : -amount;
-+			assigned[i] += delta;
-+			remaining -= delta;
++		// Redistribute clamping residual proportionally to available headroom.
++		if (remaining != 0) {
++			var headrooms = new long[free.size()];
++			long totalHeadroom = 0;
++			for (int i = 0; i < free.size(); i++) {
++				var e = free.get(i);
++				var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
++				var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
++				headrooms[i] = Math.max(0L, remaining > 0 //
++						? (long) max - assigned[i] //
++						: (long) assigned[i] - min);
++				totalHeadroom += headrooms[i];
++			}
++			for (int i = 0; i < free.size() && remaining != 0 && totalHeadroom > 0; i++) {
++				var adjustment = (long) remaining * headrooms[i] / totalHeadroom;
++				adjustment = Math.max(-headrooms[i], Math.min(headrooms[i], adjustment));
++				assigned[i] += (int) adjustment;
++				remaining -= (int) adjustment;
++				totalHeadroom -= headrooms[i];
++			}
 +		}
 +
 +		for (int i = 0; i < free.size(); i++) {
