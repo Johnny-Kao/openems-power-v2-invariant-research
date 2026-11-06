@@ -1,0 +1,106 @@
+diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
+--- a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
++++ b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
+@@ -240,41 +240,61 @@
+-	private static void distributeProportional(List<Entry> free, int target, boolean isActive) {
+-		if (free.isEmpty()) {
+-			return;
+-		}
+-
+-		var isPositive = target >= 0;
+-		var totalCapacity = 0;
+-		for (var e : free) {
+-			totalCapacity += isPositive //
+-					? Math.max(isActive ? e.ownActiveMax() : e.ownReactiveMax(), 0)
+-					: Math.abs(Math.min(isActive ? e.ownActiveMin() : e.ownReactiveMin(), 0));
+-		}
+-
+-		// Cap target to total available capacity
+-		target = isPositive //
+-				? Math.min(target, totalCapacity) //
+-				: Math.max(target, -totalCapacity);
+-
+-		var remaining = target;
+-		for (int i = 0; i < free.size(); i++) {
+-			var e = free.get(i);
+-			int power;
+-
+-			if (i == free.size() - 1) {
+-				power = remaining; // last entry absorbs rounding remainder
+-			} else if (totalCapacity == 0) {
+-				power = target / free.size();
+-			} else {
+-				var allowed = isPositive //
+-						? Math.max(isActive ? e.ownActiveMax() : e.ownReactiveMax(), 0)
+-						: Math.abs(Math.min(isActive ? e.ownActiveMin() : e.ownReactiveMin(), 0));
+-				power = (int) ((long) target * allowed / totalCapacity);
+-			}
+-
+-			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
+-			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
+-			power = fitWithin(min, max, power);
+-			remaining -= power;
+-			applySetpoint(e, power, isActive);
+-		}
+-	}
++	private static void distributeProportional(List<Entry> free, int target, boolean isActive) {
++		if (free.isEmpty()) {
++			return;
++		}
++
++		var isPositive = target >= 0;
++		var totalCapacity = 0;
++		for (var e : free) {
++			totalCapacity += isPositive //
++					? Math.max(isActive ? e.ownActiveMax() : e.ownReactiveMax(), 0)
++					: Math.abs(Math.min(isActive ? e.ownActiveMin() : e.ownReactiveMin(), 0));
++		}
++
++		// Cap target to total available capacity
++		target = isPositive //
++				? Math.min(target, totalCapacity) //
++				: Math.max(target, -totalCapacity);
++
++		var remaining = target;
++		var assigned = new int[free.size()];
++		for (int i = 0; i < free.size(); i++) {
++			var e = free.get(i);
++			int power;
++
++			if (i == free.size() - 1) {
++				power = remaining; // last entry absorbs rounding remainder
++			} else if (totalCapacity == 0) {
++				power = target / free.size();
++			} else {
++				var allowed = isPositive //
++						? Math.max(isActive ? e.ownActiveMax() : e.ownReactiveMax(), 0)
++						: Math.abs(Math.min(isActive ? e.ownActiveMin() : e.ownReactiveMin(), 0));
++				power = (int) ((long) target * allowed / totalCapacity);
++			}
++
++			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
++			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
++			power = fitWithin(min, max, power);
++			remaining -= power;
++			assigned[i] = power;
++		}
++
++		// Clamping can change the sum. Use remaining headroom to restore the
++		// feasible cluster target without disturbing allocations that already match.
++		for (int i = 0; i < free.size() && remaining != 0; i++) {
++			var e = free.get(i);
++			var min = isActive ? e.ownActiveMin() : e.ownReactiveMin();
++			var max = isActive ? e.ownActiveMax() : e.ownReactiveMax();
++			var headroom = remaining > 0 // 
++					? (long) max - assigned[i] // 
++					: (long) assigned[i] - min;
++			var amount = (int) Math.min(Math.abs((long) remaining), Math.max(0, headroom));
++			var delta = remaining > 0 ? amount : -amount;
++			assigned[i] += delta;
++			remaining -= delta;
++		}
++
++		for (int i = 0; i < free.size(); i++) {
++			applySetpoint(free.get(i), assigned[i], isActive);
++		}
++	}
