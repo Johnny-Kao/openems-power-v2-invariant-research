@@ -1,5 +1,16 @@
 # Native verification — 2026-11-06
 
+## Fork staging and upstream Draft PR — 2026-11-07
+
+- Fork created: [Johnny-Kao/openems](https://github.com/Johnny-Kao/openems); staging branch: `staging/ess-v2-cluster-power-conservation`, based on upstream `develop@1e1d35fb9b1cdadb39b83f152827faaf4acc1c0a`.
+- Staged three files only: active residual correction in `TreeSolver.java` (+45 lines), solver regression tests, and `applyPower()` integration regression.
+- Staging validation [run #42268281216](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42268281216): **PASS**, full ESS Core JUnit, main/test Checkstyle, 1,200 baseline differential cases, and two nested-cluster diagnostics. First run [#42267619592](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42267619592) passed JUnit but failed Checkstyle in a staging-only nested diagnostic, corrected and rerun.
+- Upstream [Draft PR #4117](https://github.com/OpenEMS/openems/pull/4117) opened against `develop`; asks for early review and separately asks about documented ESS/cluster power capacity limits and 32-bit intermediate overflows. No changes to the overflow research or upstream overflow implementation.
+- At creation, GitHub reported no upstream PR checks yet; staging PASS is confirmed, not an upstream CI result.
+
+---
+
+
 ## Integer range contract and sub-2.147-GW target diagnostics — 2026-11-07
 
 - P setpoints, active constraints, and ESS apparent-power capacity in the inspected V2 entry model are Java `int` values in **W**; Q constraints are `int` in **VAr**. No independent cap below the `int` type range was found in the inspected `PowerDistribution` and `TreeSolver` code paths; this does **not** rule out external component/configuration limits.
