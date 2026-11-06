@@ -1,5 +1,17 @@
 # Native verification — 2026-11-06
 
+## Integer range contract and sub-2.147-GW target diagnostics — 2026-11-07
+
+- P setpoints, active constraints, and ESS apparent-power capacity in the inspected V2 entry model are Java `int` values in **W**; Q constraints are `int` in **VAr**. No independent cap below the `int` type range was found in the inspected `PowerDistribution` and `TreeSolver` code paths; this does **not** rule out external component/configuration limits.
+- **Unmodified upstream confirmed** [run #42264482731](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42264482731): P target **+1.0 GW**, ESS A discharge max +1.0 GW, ESS B charge min −1.3 GW / discharge max 0. `getActiveMax()` on A returned **0 W**, expected 1.0 GW, because `parentConstraint - siblingMin = 2.3 GW` overflowed Java `int`.
+- **Unmodified upstream confirmed** [run #42265668583](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42265668583): 21 ESS, each ≤105 MW apparent power; 20 charge-only ESS with min −105 MW each, one discharge ESS with max +100 MW, root target **+100 MW**; `getActiveMax()` on discharge ESS returned **0 W**, expected 100 MW. Sibling sum −2.1 GW itself fits in `int`; intermediate subtraction of 100 MW − (−2.1 GW) = **2.2 GW** overflows. Both diagnostic tests produced expected assertion failures (2 failed/2 total).
+- The test source is [HeadroomIntermediateOverflowTest.java](tests/candidate/HeadroomIntermediateOverflowTest.java), executed against pinned baseline `9a4b30331ac1f557d752eb8290633042144550a7` without any implementation patch.
+- **Scope:** these are confirmed erroneous headroom getter values, **not yet proven to cause physical incorrect ESS commands**; practical deployment reachability and any out-of-model capacity restrictions remain unverified.
+- Keep distinct from the P conservation patch and ask upstream maintainers separately about supported aggregate bounds, whether `int` arithmetic is an intended limitation, and preferred checked/saturating/long intermediate calculation approach. No upstream PR opened.
+
+---
+
+
 ## Final targeted review: nested clusters and integer range — 2026-11-07
 
 - [Run #42263088717](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42263088717): **FAIL (expected diagnostic finding)** — 104 native ESS Core tests, 102 passed, 1 failed, 1 skipped. New nested-cluster tests passed; prior 1,200-case differential test passed.
