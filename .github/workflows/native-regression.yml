@@ -16,11 +16,11 @@ jobs:
         with:
           path: research
 
-      - name: Checkout OpenEMS develop
+      - name: Checkout pinned OpenEMS baseline
         uses: actions/checkout@v4
         with:
           repository: OpenEMS/openems
-          ref: develop
+          ref: 9a4b30331ac1f557d752eb8290633042144550a7
           path: openems
 
       - name: Set up Java 25
