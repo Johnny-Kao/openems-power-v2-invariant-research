@@ -40,10 +40,9 @@ public class TreeSolverConservationRegressionTest {
 		pd.setEquals("cluster", 5000);
 		pd.solve();
 
-		assertEquals("ESS A should compensate the forced minimum on B", 1000, activePower(pd, "essA"));
-		assertEquals("BMS-enforced minimum", 4000, activePower(pd, "essB"));
-		assertEquals("Feasible cluster power target must be conserved",
-				5000, activePower(pd, "essA") + activePower(pd, "essB"));
+		assertEquals(1000, activePower(pd, "essA"), "ESS A should compensate the forced minimum on B");
+		assertEquals(4000, activePower(pd, "essB"), "BMS-enforced minimum");
+		assertEquals(5000, activePower(pd, "essA") + activePower(pd, "essB"), "Feasible cluster power target must be conserved");
 	}
 
 	@Test
@@ -56,8 +55,7 @@ public class TreeSolverConservationRegressionTest {
 		pd.setEquals("cluster", 5000);
 		pd.solve();
 
-		assertEquals("Aggregate output cannot depend on child order",
-				5000, activePower(pd, "essA") + activePower(pd, "essB"));
+		assertEquals(5000, activePower(pd, "essA") + activePower(pd, "essB"), "Aggregate output cannot depend on child order");
 	}
 
 	@Test
@@ -70,10 +68,9 @@ public class TreeSolverConservationRegressionTest {
 		pd.setEquals("cluster", 0);
 		pd.solve();
 
-		assertEquals("ESS A must absorb the forced discharge", -4000, activePower(pd, "essA"));
-		assertEquals("ESS B retains its hardware minimum", 4000, activePower(pd, "essB"));
-		assertEquals("Feasible zero cluster target must be conserved",
-				0, activePower(pd, "essA") + activePower(pd, "essB"));
+		assertEquals(-4000, activePower(pd, "essA"), "ESS A must absorb the forced discharge");
+		assertEquals(4000, activePower(pd, "essB"), "ESS B retains its hardware minimum");
+		assertEquals(0, activePower(pd, "essA") + activePower(pd, "essB"), "Feasible zero cluster target must be conserved");
 	}
 
 	@Test
