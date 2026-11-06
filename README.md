@@ -12,7 +12,7 @@ Relevant code:
 
 ## Candidate
 
-The V2 `BALANCE` strategy's `TreeSolver.distributeProportional()` appears to lose aggregate conservation after individual ESS power bounds are applied. The routine clamps each ESS setpoint but never redistributes the resulting residual to other ESS units with headroom.
+The V2 `BALANCE` strategy's `TreeSolver.distributeProportional()` was verified to lose aggregate conservation after individual ESS power bounds are applied. The routine clamps each ESS setpoint but never redistributes the resulting residual to other ESS units with headroom.
 
 Feasible example (watts):
 
@@ -22,7 +22,7 @@ Feasible example (watts):
 | essB | 4,000 | 10,000 | 4,000 |
 | **Cluster** | | **Requested 5,000** | **5,000 feasible** |
 
-For ordering A then B, code inspection predicts A=2,500 and B=4,000: **total 6,500**, not 5,000. Reversing children predicts total 5,000.
+On the pinned original upstream version, native JUnit confirmed A=2,500 with B constrained to 4,000: **total 6,500**, not the feasible 5,000. Reversing children gives total 5,000.
 
 The positive minimum is explicitly covered by upstream's `testEssClusterForceDischarge()` as an allowed BMS-induced state. **No physical hardware behavior has been demonstrated.**
 
@@ -41,12 +41,12 @@ The positive minimum is explicitly covered by upstream's `testEssClusterForceDis
 
 ## Tests
 
-`tests/TreeSolverConservationRegressionTest.java` is intended to be copied into the matching upstream Java test package; it uses upstream test APIs, not a reimplemented solver. The original source **failed 2/4** targeted regressions ([baseline](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42235424562)); the patch **passed the full ESS Core test suite, 7 regressions, and both checkstyle tasks** ([patched CI](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42238671829)).
+`tests/TreeSolverConservationRegressionTest.java` and `tests/PowerDistributionHandlerV2ConservationIntegrationTest.java` are injected into the upstream Java test package for CI; both use native OpenEMS APIs. The unmodified upstream source **failed 2/4** targeted regressions ([baseline](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42235424562)). The current proportional-headroom patch **passed the full ESS Core test suite, 9 solver regressions, 1 end-to-end applyPower integration regression, and both checkstyle tasks** ([latest patched CI](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42241608639)).
 
 No GitHub Actions workflow is automatically triggered from this repository. Do not run billable CI without checking runner/billing eligibility. Keep original-fail and patched-pass evidence separately.
 
 ## Current evidence level
 
 - Upstream source and existing regression tests inspected.
-- Independent isolated Java model reported the conservation failure; this is **not** OpenEMS JUnit verification.
+- Upstream-native Java JUnit confirms the original bug; independent Java models were used only for earlier exploratory work.
 - A native JUnit regression test and one-method research patch have been validated against upstream commit `9a4b30331ac1f557d752eb8290633042144550a7`; see [RESULTS.md](RESULTS.md).
