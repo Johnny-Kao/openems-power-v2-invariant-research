@@ -1,0 +1,62 @@
+name: OpenEMS fork staging V2 cluster conservation native validation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout research diagnostics
+        uses: actions/checkout@v4
+        with:
+          path: research
+      - name: Checkout fork staging branch
+        uses: actions/checkout@v4
+        with:
+          repository: Johnny-Kao/openems
+          ref: staging/ess-v2-cluster-power-conservation
+          path: openems
+      - name: Checkout original upstream source
+        uses: actions/checkout@v4
+        with:
+          repository: OpenEMS/openems
+          ref: 9a4b30331ac1f557d752eb8290633042144550a7
+          path: baseline
+      - name: Set up Java 25
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Install staging-only differential and nested diagnostics
+        shell: bash
+        run: |
+          sed 's/TreeSolver/BaselineTreeSolver/g' \
+            baseline/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java \
+            > openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/BaselineTreeSolver.java
+          cp research/tests/candidate/ScopedPowerDifferentialTest.java \
+            openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/
+          cp research/tests/candidate/NestedClusterCompatibilityTest.java \
+            openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/
+          git -C openems diff --check
+      - name: Native ESS core full JUnit
+        working-directory: openems
+        run: |
+          chmod +x gradlew
+          ./gradlew :io.openems.edge.ess.core:test --no-daemon
+      - name: Native ESS core Checkstyle main and test
+        working-directory: openems
+        run: ./gradlew :io.openems.edge.ess.core:checkstyleMain :io.openems.edge.ess.core:checkstyleTest --no-daemon
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fork-staging-native-results
+          path: |
+            openems/io.openems.edge.ess.core/build/test-results/**
+            openems/io.openems.edge.ess.core/build/reports/tests/**
+          if-no-files-found: ignore
