@@ -1,5 +1,17 @@
 # Native verification — 2026-11-06
 
+## Final targeted review: nested clusters and integer range — 2026-11-07
+
+- [Run #42263088717](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42263088717): **FAIL (expected diagnostic finding)** — 104 native ESS Core tests, 102 passed, 1 failed, 1 skipped. New nested-cluster tests passed; prior 1,200-case differential test passed.
+- Two-level nested clusters covered baseline-correct per-ESS outputs and active aggregate conservation with forced BMS minima across six requested targets.
+- **New pre-existing integer-boundary risk:** two ESS with 1,200,000,000 W maximum each, explicit cluster target 2,000,000,000 W. The candidate returned aggregate 0 W rather than 2,000,000,000 W. The pinned upstream `PowerDistribution.Entry.Virtual.ownActiveMax()` uses `mapToInt(...).sum()` and wraps a combined 2,400,000,000 W to a negative `int`; the scoped patch does not modify this implementation. Separate baseline-specific JUnit verification was not run for this case.
+- This is an extreme synthetic range, not verified production reachability; **do not conflate it with the original BMS clipping bug**.
+- Current selected patch remains [candidate-preserve-baseline-on-correct-output.patch](patches/candidate-preserve-baseline-on-correct-output.patch), unchanged in this round. The new test remains failing intentionally as evidence. No upstream PR or staging merge.
+- Recommendation: keep overflow as a separate potential upstream issue, or define a realistic supported aggregate bound before changing wide-range arithmetic. Do not claim full boundary clearance.
+
+---
+
+
 ## Scoped P-only differential validation — 2026-11-07
 
 - **Selected candidate:** [preserve-baseline correction](patches/candidate-preserve-baseline-on-correct-output.patch), changing only the V2 `TreeSolver.java` implementation.
