@@ -2,7 +2,10 @@ package io.openems.edge.ess.core.power.v2;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import java.util.ArrayList;
 import java.util.List;
+
+import io.openems.edge.ess.api.ManagedSymmetricEss;
 
 import org.junit.jupiter.api.Test;
 
@@ -38,4 +41,39 @@ public class HeadroomIntermediateOverflowTest {
         assertEquals(1_000_000_000, entry.getActiveMax(),
                 "the cluster target can be reached with ESS A alone");
     }
+    @Test
+    public void testTwentySmallChargeOnlyEssCanOverflowHeadroomAt100MwTarget() {
+        // No device exceeds 105 MW. The root's positive capacity and target are 100 MW.
+        // Twenty charge-only siblings each have a minimum of -105 MW.
+        // Sibling minimum sum is -2.1 GW (itself fits in int), but
+        // parent target minus sibling sum is +2.2 GW and wraps in int.
+        var a = new DummyManagedSymmetricEss("a")
+                .withSoc(50)
+                .withAllowedChargePower(0)
+                .withAllowedDischargePower(100_000_000)
+                .withMaxApparentPower(100_000_000);
+        List<ManagedSymmetricEss> members = new ArrayList<>();
+        members.add(a);
+        for (int i = 0; i < 20; i++) {
+            members.add(new DummyManagedSymmetricEss("b" + i)
+                    .withSoc(50)
+                    .withAllowedChargePower(-105_000_000)
+                    .withAllowedDischargePower(0)
+                    .withMaxApparentPower(105_000_000));
+        }
+        var root = new DummyMetaEss("root", members.toArray(new ManagedSymmetricEss[0]));
+        List<ManagedSymmetricEss> all = new ArrayList<>();
+        all.add(root);
+        all.addAll(members);
+        var pd = PowerDistribution.from(all);
+        pd.setEquals("root", 100_000_000);
+
+        assertEquals(100_000_000, pd.getEntries().get("root").ownActiveMax(),
+                "root positive capacity remains within int");
+        assertEquals(-2_100_000_000, pd.getEntries().get("root").ownActiveMin(),
+                "root negative capacity remains within int");
+        assertEquals(100_000_000, pd.getEntries().get("a").getActiveMax(),
+                "100 MW ESS should retain usable headroom");
+    }
+
 }
