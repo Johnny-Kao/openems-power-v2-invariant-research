@@ -1,7 +1,7 @@
 diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
 --- a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
 +++ b/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java
-@@ -166,48 +166,40 @@
+@@ -166,48 +166,45 @@
  	 * @param target   the target
  	 * @param isActive boolean true or false
  	 */
@@ -49,16 +49,21 @@ diff --git a/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/Tree
 -	 */
 +	private static void distributeToChildren(List<Entry> children, int target, boolean isActive) {
 +
-+		// Pin only fixed entries; direction-forced bounds may need further adjustment.
++		// For active power, direction-forced bounds may need further adjustment.
++		// Preserve the existing reactive power handling.
++		var isPositive = target >= 0;
 +		var remaining = target;
 +		var free = new ArrayList<Entry>(children.size());
 +
 +		for (var child : children) {
 +			var min = isActive ? child.ownActiveMin() : child.ownReactiveMin();
 +			var max = isActive ? child.ownActiveMax() : child.ownReactiveMax();
-+			if (min == max) {
-+				applySetpoint(child, min, isActive);
-+				remaining -= min;
++			var isForced = min == max //
++					|| (!isActive && ((!isPositive && min > 0) || (isPositive && max < 0)));
++			if (isForced) {
++				var forced = isPositive ? max : min;
++				applySetpoint(child, forced, isActive);
++				remaining -= forced;
 +			} else {
 +				free.add(child);
 +			}
