@@ -40,4 +40,28 @@ public class DirectionPreservationCandidateTest {
 		assertEquals(0, activePower(pd, "essC"));
 		assertEquals(4000, activePower(pd, "essB"));
 	}
+
+	private static int reactivePower(PowerDistribution pd, String id) {
+		return ((PowerDistribution.Entry.Actual) pd.getEntries().get(id)).reactivePowerSetPoint;
+	}
+
+	@Test
+	public void testReactiveOnlyDistributionStillUsesOriginalQCorrection() {
+		var a = ess("essA", -10000, 10000);
+		var c = ess("essC", -10000, 10000);
+		var b = ess("essB", -10000, 10000);
+		var cluster = new DummyMetaEss("cluster", a, c, b);
+
+		var pd = PowerDistribution.from(List.of(cluster, a, c, b));
+		pd.setReactiveLessOrEquals("essA", 5000);
+		pd.setReactiveGreaterOrEquals("essC", 0);
+		pd.setReactiveGreaterOrEquals("essB", 4000);
+		pd.setReactiveEquals("cluster", 4000);
+		pd.solve();
+
+		assertEquals(-1290, reactivePower(pd, "essA"));
+		assertEquals(1290, reactivePower(pd, "essC"));
+		assertEquals(4000, reactivePower(pd, "essB"));
+	}
+
 }
