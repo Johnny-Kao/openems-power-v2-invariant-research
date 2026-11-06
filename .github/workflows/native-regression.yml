@@ -1,0 +1,59 @@
+name: OpenEMS V2 native regression (baseline)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout research
+        uses: actions/checkout@v4
+        with:
+          path: research
+
+      - name: Checkout OpenEMS develop
+        uses: actions/checkout@v4
+        with:
+          repository: OpenEMS/openems
+          ref: develop
+          path: openems
+
+      - name: Set up Java 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Add research-only native regression test
+        shell: bash
+        run: |
+          cp research/tests/TreeSolverConservationRegressionTest.java \
+            openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/TreeSolverConservationRegressionTest.java
+
+      - name: Confirm baseline source revision
+        working-directory: openems
+        run: git rev-parse HEAD
+
+      - name: Run targeted JUnit on unmodified production solver
+        working-directory: openems
+        run: |
+          chmod +x gradlew
+          ./gradlew :io.openems.edge.ess.core:test \
+            --tests 'io.openems.edge.ess.core.power.v2.TreeSolverConservationRegressionTest' \
+            --stacktrace --no-daemon
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: baseline-test-results
+          path: |
+            openems/io.openems.edge.ess.core/generated/test-reports/**
+            openems/io.openems.edge.ess.core/build/test-results/**
+            openems/io.openems.edge.ess.core/build/reports/tests/**
+          if-no-files-found: ignore
