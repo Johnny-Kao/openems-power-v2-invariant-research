@@ -1,6 +1,6 @@
 # OpenEMS ESS Power V2 — distribution invariant research
 
-**Status:** research only; no upstream patch or production-impact claim.
+**Status:** validated research patch on pinned upstream Java 25 source; **no upstream PR or physical-hardware validation**. See [native verification results](RESULTS.md).
 
 Upstream: https://github.com/OpenEMS/openems
 
@@ -41,7 +41,7 @@ The positive minimum is explicitly covered by upstream's `testEssClusterForceDis
 
 ## Tests
 
-`tests/TreeSolverConservationRegressionTest.java` is intended to be copied into the matching upstream Java test package; it uses upstream test APIs, not a reimplemented solver. Initial assertions are **expected to fail on unmodified upstream**.
+`tests/TreeSolverConservationRegressionTest.java` is intended to be copied into the matching upstream Java test package; it uses upstream test APIs, not a reimplemented solver. The original source **failed 2/4** targeted regressions ([baseline](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42235424562)); the patch **passed the full ESS Core test suite, 7 regressions, and both checkstyle tasks** ([patched CI](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42238671829)).
 
 No GitHub Actions workflow is automatically triggered from this repository. Do not run billable CI without checking runner/billing eligibility. Keep original-fail and patched-pass evidence separately.
 
@@ -49,4 +49,4 @@ No GitHub Actions workflow is automatically triggered from this repository. Do n
 
 - Upstream source and existing regression tests inspected.
 - Independent isolated Java model reported the conservation failure; this is **not** OpenEMS JUnit verification.
-- A native JUnit regression test is prepared for integration; execution and results remain pending.
+- A native JUnit regression test and one-method research patch have been validated against upstream commit `9a4b30331ac1f557d752eb8290633042144550a7`; see [RESULTS.md](RESULTS.md).
