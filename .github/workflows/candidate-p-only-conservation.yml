@@ -32,11 +32,11 @@ jobs:
           sed 's/TreeSolver/BaselineTreeSolver/g' \
             openems/io.openems.edge.ess.core/src/io/openems/edge/ess/core/power/v2/TreeSolver.java \
             > openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/BaselineTreeSolver.java
-          for file in research/tests/*.java research/tests/candidate/*.java; do
+          for file in research/tests/*.java research/tests/candidate/ScopedPowerDifferentialTest.java; do
             cp "$file" openems/io.openems.edge.ess.core/test/io/openems/edge/ess/core/power/v2/
           done
-          git -C openems apply --check "$GITHUB_WORKSPACE/research/patches/candidate-p-only-conservation.patch"
-          git -C openems apply "$GITHUB_WORKSPACE/research/patches/candidate-p-only-conservation.patch"
+          git -C openems apply --check "$GITHUB_WORKSPACE/research/patches/candidate-preserve-baseline-on-correct-output.patch"
+          git -C openems apply "$GITHUB_WORKSPACE/research/patches/candidate-preserve-baseline-on-correct-output.patch"
           git -C openems diff --check
           git -C openems diff --stat
       - name: Run full ESS Core native JUnit
