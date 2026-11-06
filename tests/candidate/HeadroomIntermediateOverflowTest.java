@@ -70,8 +70,8 @@ public class HeadroomIntermediateOverflowTest {
 
         assertEquals(100_000_000, pd.getEntries().get("root").ownActiveMax(),
                 "root positive capacity remains within int");
-        assertEquals(-2_100_000_000, pd.getEntries().get("root").ownActiveMin(),
-                "root negative capacity remains within int");
+        assertEquals(100_000_000, pd.getEntries().get("root").ownActiveMin(),
+                "equals constraint clamps root minimum to target");
         assertEquals(100_000_000, pd.getEntries().get("a").getActiveMax(),
                 "100 MW ESS should retain usable headroom");
     }
