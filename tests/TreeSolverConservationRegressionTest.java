@@ -88,6 +88,39 @@ public class TreeSolverConservationRegressionTest {
 		assertEquals(2500, activePower(pd, "essB"));
 	}
 
+
+	@Test
+	public void testResidualSharedByAvailableHeadroom() {
+		var a = ess("essA", -5000, 5000);
+		var c = ess("essC", -10000, 10000);
+		var b = ess("essB", 4000, 10000);
+		var cluster = new DummyMetaEss("cluster", a, c, b);
+
+		var pd = PowerDistribution.from(List.of(cluster, a, c, b));
+		pd.setEquals("cluster", 7000);
+		pd.solve();
+
+		assertEquals(1000, activePower(pd, "essA"));
+		assertEquals(2000, activePower(pd, "essC"));
+		assertEquals(4000, activePower(pd, "essB"));
+	}
+
+	@Test
+	public void testResidualSharesUnaffectedByChildOrder() {
+		var a = ess("essA", -5000, 5000);
+		var c = ess("essC", -10000, 10000);
+		var b = ess("essB", 4000, 10000);
+		var cluster = new DummyMetaEss("cluster", c, a, b);
+
+		var pd = PowerDistribution.from(List.of(cluster, c, a, b));
+		pd.setEquals("cluster", 7000);
+		pd.solve();
+
+		assertEquals(1000, activePower(pd, "essA"));
+		assertEquals(2000, activePower(pd, "essC"));
+		assertEquals(4000, activePower(pd, "essB"));
+	}
+
 	@Test
 	public void testFeasibleNegativeTargetWithForcedCharging() {
 		var a = ess("essA", -10000, 10000);
