@@ -64,4 +64,23 @@ public class DirectionPreservationCandidateTest {
 		assertEquals(4000, reactivePower(pd, "essB"));
 	}
 
+
+	@Test
+	public void testFeasibleTargetWithSimultaneousOpposingBmsBounds() {
+		var a = ess("essA", 4000, 10000);
+		var b = ess("essB", 4000, 10000);
+		var c = ess("essC", -5000, -1000);
+		var cluster = new DummyMetaEss("cluster", a, b, c);
+
+		var pd = PowerDistribution.from(List.of(cluster, a, b, c));
+		pd.setEquals("cluster", 3000);
+		pd.solve();
+
+		// Feasible: +4000 +4000 -5000 = +3000.
+		assertEquals(4000, activePower(pd, "essA"));
+		assertEquals(4000, activePower(pd, "essB"));
+		assertEquals(-5000, activePower(pd, "essC"));
+		assertEquals(3000, activePower(pd, "essA") + activePower(pd, "essB") + activePower(pd, "essC"));
+	}
+
 }
