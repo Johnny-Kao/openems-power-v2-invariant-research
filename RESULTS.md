@@ -1,5 +1,18 @@
 # Native verification — 2026-11-06
 
+## Scoped P-only differential validation — 2026-11-07
+
+- **Selected candidate:** [preserve-baseline correction](patches/candidate-preserve-baseline-on-correct-output.patch), changing only the V2 `TreeSolver.java` implementation.
+- **PASS:** [Run #42262148114](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42262148114), native full ESS Core JUnit and main/test Checkstyle.
+- `ScopedPowerDifferentialTest` compiles the original upstream `TreeSolver` under `BaselineTreeSolver` beside the patched solver. It checks 1,200 seeded three-ESS combinations, requiring identical individual P and Q results when the baseline already meets the achievable aggregate P target; otherwise, the patched result must meet the achievable target and remain within individual P bounds and apparent-power limits.
+- Additional deterministic differential cases cover infeasible high/low targets, opposing BMS ranges, and simultaneous P/Q constraints.
+- The earlier [Run #42261403697](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42261403697) failed: the first scoped variant changed a baseline-correct per-ESS result. The new candidate avoids that by running the original allocation first, then compensating only mismatched active aggregate power. Two additional failures in that run were tests for the deliberately excluded direction-optimization policy.
+- **CI caveat:** [Run #42258728682](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42258728682) had a workflow typo applying the full candidate instead of the P-only patch; do not cite it as evidence for P-only.
+- The results are not formal proof, hardware certification, or a demonstrated field incident. Large aggregate values, deeper nested-cluster adversarial cases, and real device dynamics remain unverified. No upstream PR was opened.
+
+---
+
+
 ## Final proportional-rebalance validation — 2026-11-07
 
 - [Run #42240875119](https://github.com/Johnny-Kao/openems-power-v2-invariant-research/actions/runs/42240875119): **PASS**, full ESS Core native JUnit and main/test Checkstyle, with **nine** additional solver regressions.
